@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@import "@nipsysdev/lsd-react/css";
+
+html,
+body,
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  max-width: 800px;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--lsd-surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--lsd-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--lsd-text-secondary);
+}
