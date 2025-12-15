@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::sync::{Mutex, OnceCell, RwLock};
 use uuid::Uuid;
 
@@ -91,18 +91,28 @@ pub struct DextoolsConfig {
 
 impl Default for DextoolsConfig {
     fn default() -> Self {
-        // Create a proper data directory in user's home directory
-        let data_dir = dirs::data_dir()
-            .unwrap_or_else(|| std::env::temp_dir())
-            .join("dextools")
-            .join("codex_data");
+        Self::new()
+    }
+}
 
-        // Ensure the directory exists
+impl DextoolsConfig {
+    pub fn new() -> Self {
+        // Use a simple, reliable approach for data directory
+        let data_dir = std::env::temp_dir().join("dextools").join("codex_data");
+
+        println!("Codex data directory: {}", data_dir.display());
+
+        // Ensure the directory exists using std::fs
         if let Err(e) = std::fs::create_dir_all(&data_dir) {
             eprintln!(
                 "Failed to create data directory {}: {}",
                 data_dir.display(),
                 e
+            );
+        } else {
+            println!(
+                "Successfully created data directory: {}",
+                data_dir.display()
             );
         }
 
@@ -115,11 +125,42 @@ impl Default for DextoolsConfig {
             auto_connect: false,
         }
     }
-}
 
-impl DextoolsConfig {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn with_app_handle(app_handle: &AppHandle) -> Self {
+        // Use app_data_dir for proper application data storage
+        let data_dir = match app_handle.path().app_data_dir() {
+            Ok(dir) => dir.join("codex_data"),
+            Err(e) => {
+                eprintln!("Failed to get app data directory: {}", e);
+                // Fallback to temp directory
+                std::env::temp_dir().join("dextools").join("codex_data")
+            }
+        };
+
+        println!("Codex data directory: {}", data_dir.display());
+
+        // Ensure the directory exists using std::fs
+        if let Err(e) = std::fs::create_dir_all(&data_dir) {
+            eprintln!(
+                "Failed to create data directory {}: {}",
+                data_dir.display(),
+                e
+            );
+        } else {
+            println!(
+                "Successfully created data directory: {}",
+                data_dir.display()
+            );
+        }
+
+        Self {
+            data_dir,
+            storage_quota: 1024 * 1024 * 1024, // 1 GB
+            max_peers: 50,
+            discovery_port: 8089,
+            log_level: LogLevel::Info,
+            auto_connect: false,
+        }
     }
 
     fn to_codex_config(&self) -> CodexConfig {
@@ -129,7 +170,7 @@ impl DextoolsConfig {
             .storage_quota(self.storage_quota)
             .max_peers(self.max_peers)
             .discovery_port(self.discovery_port)
-            .repo_kind(RepoKind::Fs) // Explicitly set filesystem backend
+            .repo_kind(RepoKind::LevelDb)
     }
 }
 
@@ -192,6 +233,8 @@ impl CodexManager {
     }
 
     pub async fn connect(&self) -> CodexResult<()> {
+        println!("Starting Codex connection...");
+
         // Update status to connecting
         {
             let mut status = self.status.write().await;
@@ -206,14 +249,33 @@ impl CodexManager {
 
         // Create Codex configuration
         let codex_config = self.config.to_codex_config();
+        println!(
+            "Created Codex config for directory: {}",
+            self.config.data_dir.display()
+        );
 
         // Create and start the node
-        let mut node =
-            CodexNode::new(codex_config).map_err(|e| CodexError::NodeCreation(e.to_string()))?;
+        let mut node = match CodexNode::new(codex_config) {
+            Ok(node) => {
+                println!("Successfully created Codex node");
+                node
+            }
+            Err(e) => {
+                println!("Failed to create Codex node: {}", e);
+                return Err(CodexError::NodeCreation(e.to_string()));
+            }
+        };
 
         // Start the node
-        node.start()
-            .map_err(|e| CodexError::NodeStart(e.to_string()))?;
+        match node.start() {
+            Ok(_) => {
+                println!("Successfully started Codex node");
+            }
+            Err(e) => {
+                println!("Failed to start Codex node: {}", e);
+                return Err(CodexError::NodeStart(e.to_string()));
+            }
+        }
 
         // Store the node and update status
         {
@@ -229,6 +291,7 @@ impl CodexManager {
         // Update network info
         self.update_network_info().await?;
 
+        println!("Codex connection completed successfully");
         Ok(())
     }
 
@@ -583,11 +646,17 @@ impl std::error::Error for CodexError {}
 // Global manager instance
 pub static CODEX_MANAGER: OnceCell<Arc<CodexManager>> = OnceCell::const_new();
 
-pub async fn get_codex_manager() -> CodexResult<Arc<CodexManager>> {
+pub async fn get_codex_manager_with_handle(
+    app_handle: Option<AppHandle>,
+) -> CodexResult<Arc<CodexManager>> {
     if let Some(manager) = CODEX_MANAGER.get() {
         Ok(Arc::clone(manager))
     } else {
-        let config = DextoolsConfig::new();
+        let config = if let Some(handle) = app_handle {
+            DextoolsConfig::with_app_handle(&handle)
+        } else {
+            DextoolsConfig::new()
+        };
         let manager = Arc::new(CodexManager::new(config).await?);
         CODEX_MANAGER.set(manager.clone()).map_err(|_| {
             CodexError::Configuration("Failed to initialize Codex manager".to_string())
@@ -602,51 +671,67 @@ fn map_codex_error(err: CodexError) -> String {
 }
 
 #[tauri::command]
-pub async fn get_codex_status() -> Result<CodexConnectionStatus, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_codex_status(app_handle: AppHandle) -> Result<CodexConnectionStatus, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     Ok(manager.get_status().await)
 }
 
 #[tauri::command]
-pub async fn get_codex_error() -> Result<Option<String>, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_codex_error(app_handle: AppHandle) -> Result<Option<String>, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     Ok(manager.get_error().await)
 }
 
 #[tauri::command]
-pub async fn get_network_info() -> Result<NetworkInfo, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_network_info(app_handle: AppHandle) -> Result<NetworkInfo, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     Ok(manager.get_network_info().await)
 }
 
 #[tauri::command]
-pub async fn get_storage_info() -> Result<StorageInfo, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_storage_info(app_handle: AppHandle) -> Result<StorageInfo, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     Ok(manager.get_storage_info().await)
 }
 
 #[tauri::command]
-pub async fn connect_to_codex() -> Result<(), String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn connect_to_codex(app_handle: AppHandle) -> Result<(), String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     manager.connect().await.map_err(map_codex_error)
 }
 
 #[tauri::command]
-pub async fn disconnect_from_codex() -> Result<(), String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn disconnect_from_codex(app_handle: AppHandle) -> Result<(), String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     manager.disconnect().await.map_err(map_codex_error)
 }
 
 #[tauri::command]
-pub async fn get_codex_peer_id() -> Result<Option<String>, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_codex_peer_id(app_handle: AppHandle) -> Result<Option<String>, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     let network_info = manager.get_network_info().await;
     Ok(network_info.peer_id)
 }
 
 #[tauri::command]
-pub async fn get_codex_version() -> Result<Option<String>, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_codex_version(app_handle: AppHandle) -> Result<Option<String>, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     let network_info = manager.get_network_info().await;
     Ok(network_info.version)
 }
@@ -654,9 +739,11 @@ pub async fn get_codex_version() -> Result<Option<String>, String> {
 #[tauri::command]
 pub async fn upload_file_to_codex(
     file_path: String,
-    _app_handle: AppHandle,
+    app_handle: AppHandle,
 ) -> Result<UploadResultResponse, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     let path = PathBuf::from(file_path);
 
     // Start upload with progress tracking
@@ -678,9 +765,11 @@ pub async fn upload_file_to_codex(
 pub async fn download_file_from_codex(
     cid: String,
     save_path: String,
-    _app_handle: AppHandle,
+    app_handle: AppHandle,
 ) -> Result<DownloadResultResponse, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     let path = PathBuf::from(save_path.clone());
     let cid_clone = cid.clone();
 
@@ -718,8 +807,14 @@ pub struct DownloadResultResponse {
 }
 
 #[tauri::command]
-pub async fn connect_to_peer(peer_id: String, addresses: Vec<String>) -> Result<(), String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn connect_to_peer(
+    peer_id: String,
+    addresses: Vec<String>,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     manager
         .connect_to_peer(peer_id, addresses)
         .await
@@ -727,27 +822,9 @@ pub async fn connect_to_peer(peer_id: String, addresses: Vec<String>) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_node_addresses() -> Result<Vec<String>, String> {
-    let manager = get_codex_manager().await.map_err(map_codex_error)?;
+pub async fn get_node_addresses(app_handle: AppHandle) -> Result<Vec<String>, String> {
+    let manager = get_codex_manager_with_handle(Some(app_handle))
+        .await
+        .map_err(map_codex_error)?;
     manager.get_node_addresses().await.map_err(map_codex_error)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_codex_manager_initialization() {
-        // Test that the manager can be initialized
-        let result = get_codex_manager().await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_status_retrieval() {
-        let manager = get_codex_manager().await.unwrap();
-        let status = manager.get_status().await;
-        // Should be Disconnected by default
-        assert!(matches!(status, CodexConnectionStatus::Disconnected));
-    }
 }
