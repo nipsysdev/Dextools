@@ -93,7 +93,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-lsd-surface-primary">
+    <div className="size-full bg-lsd-surface-primary pt-[env(safe-area-inset-top)]">
       <header className="flex p-6 border-b border-lsd-border justify-between items-center">
         <Typography variant="h3">
           Dextools

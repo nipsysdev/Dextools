@@ -167,7 +167,7 @@ export default function CodexConnectionDialog() {
             {getStatusDescription(codexStatus)}
           </DialogDescription>
         </DialogHeader>
-        
+
         <Progress
           indeterminate={codexStatus === CodexConnectionStatus.Connecting}
           value={codexStatus === CodexConnectionStatus.Connected ? 100 : undefined}
@@ -177,18 +177,24 @@ export default function CodexConnectionDialog() {
           <div className="mt-4 space-y-2">
             {codexVersion && (
               <Typography variant="body2">
-                Version: {codexVersion}
+                Codex Version: {codexVersion}
               </Typography>
             )}
             {codexPeerId && (
-              <Typography variant="body2">
-                Peer ID: {codexPeerId.slice(0, 20)}...
+              <div className="flex flex-col">
+                <Typography variant="body2">
+                Peer ID:
               </Typography>
+                <Typography variant="body2" style={{"overflowWrap": "anywhere"}}>
+                {codexPeerId}
+              </Typography>
+
+                </div>
             )}
 
             {/* Show user's node addresses */}
             {nodeAddresses.length > 0 && (
-              <div className="mt-2">
+              <div className="flex flex-col mt-2">
                 <Typography variant="body2" color="secondary">
                   Your Addresses (share these with others):
                 </Typography>
