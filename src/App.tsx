@@ -6,7 +6,7 @@ import {
 	TabsTrigger,
 	Typography,
 } from "@nipsysdev/lsd-react";
-import StorageConnectionDialog from "./features/connection/components/ConnectionDialog";
+import ConnectionDialog from "./features/connection/components/ConnectionDialog";
 import {
 	$connectionStatus,
 	$isConnected,
@@ -17,6 +17,8 @@ import UploadTab from "./features/upload/components/UploadTab";
 import "./App.css";
 import { getConnectionStatusText } from "./features/connection/connectionUtils";
 import NodeTab from "./features/node/components/NodeTab";
+import AddPeerDialog from "./features/peers/components/AddPeerDialog";
+import PeersTab from "./features/peers/components/PeersTab";
 
 function App() {
 	const connectionStatus = useStore($connectionStatus);
@@ -49,6 +51,9 @@ function App() {
 					<TabsTrigger value="node" className="border-b-0">
 						Node
 					</TabsTrigger>
+					<TabsTrigger value="peers" className="border-b-0">
+						Peers
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="upload" className="flex-auto mt-0 mb-0">
@@ -62,9 +67,14 @@ function App() {
 				<TabsContent value="node" className="flex-auto mt-0 mb-0">
 					<NodeTab />
 				</TabsContent>
+
+				<TabsContent value="peers" className="flex-auto mt-0 mb-0">
+					<PeersTab />
+				</TabsContent>
 			</Tabs>
 
 			<ConnectionDialog />
+			<AddPeerDialog />
 		</div>
 	);
 }

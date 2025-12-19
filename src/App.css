@@ -29,3 +29,8 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--lsd-text-secondary);
 }
+
+/* LSD-REACT ISSUES WORKAROUND */
+div:has(> input) {
+  width: 100% !important;
+}

@@ -13,6 +13,7 @@ import { connectToStorage, disconnectFromStorage } from "../connectionService";
 import {
 	$connectionError,
 	$connectionStatus,
+	$isConnected,
 	$isConnectionDialogOpened,
 } from "../connectionStore";
 import { ConnectionStatus } from "../connectionTypes";
@@ -24,6 +25,7 @@ import {
 export default function ConnectionDialog() {
 	const isDialogOpened = useStore($isConnectionDialogOpened);
 	const connectionStatus = useStore($connectionStatus);
+	const isConnected = useStore($isConnected);
 	const connectionError = useStore($connectionError);
 
 	return (
@@ -45,9 +47,7 @@ export default function ConnectionDialog() {
 
 				<Progress
 					indeterminate={connectionStatus === ConnectionStatus.Connecting}
-					value={
-						connectionStatus === ConnectionStatus.Connected ? 100 : undefined
-					}
+					value={isConnected ? 100 : undefined}
 				/>
 
 				{connectionStatus === ConnectionStatus.Error && (
@@ -64,10 +64,8 @@ export default function ConnectionDialog() {
 						ConnectionStatus.Initialized,
 						ConnectionStatus.Error,
 					].includes(connectionStatus) && (
-						<Button variant="outlined" onClick={disconnectFromStorage}>
-							{connectionStatus === ConnectionStatus.Connecting
-								? "Abort"
-								: "Disconnect"}
+						<Button variant="filled" onClick={disconnectFromStorage}>
+							{isConnected ? "Disconnect" : "Abort"}
 						</Button>
 					)}
 
@@ -76,7 +74,7 @@ export default function ConnectionDialog() {
 						ConnectionStatus.Initialized,
 						ConnectionStatus.Error,
 					].includes(connectionStatus) && (
-						<Button variant="outlined" onClick={connectToStorage}>
+						<Button variant="filled" onClick={connectToStorage}>
 							Connect
 						</Button>
 					)}
