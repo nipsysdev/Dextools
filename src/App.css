@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import "@nipsysdev/lsd-react/css";
+@import "tailwindcss";
 
 html,
 body,
