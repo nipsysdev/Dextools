@@ -1,5 +1,5 @@
-@import "@nipsysdev/lsd-react/css";
 @import "tailwindcss";
+@import "@nipsysdev/lsd-react/css";
 
 html,
 body,
@@ -28,9 +28,4 @@ body,
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--lsd-text-secondary);
-}
-
-/* LSD-REACT ISSUES WORKAROUND */
-div:has(> input) {
-  width: 100% !important;
 }

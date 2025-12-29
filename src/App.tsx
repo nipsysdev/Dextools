@@ -42,33 +42,33 @@ function App() {
 
 			<Tabs defaultValue="upload" className="flex-auto flex flex-col px-0.5">
 				<TabsList fullWidth>
-					<TabsTrigger value="upload" className="border-b-0">
+					<TabsTrigger value="upload">
 						Upload
 					</TabsTrigger>
-					<TabsTrigger value="download" className="border-b-0">
+					<TabsTrigger value="download">
 						Download
 					</TabsTrigger>
-					<TabsTrigger value="node" className="border-b-0">
+					<TabsTrigger value="node">
 						Node
 					</TabsTrigger>
-					<TabsTrigger value="peers" className="border-b-0">
+					<TabsTrigger value="peers">
 						Peers
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="upload" className="flex-auto mt-0 mb-0">
+				<TabsContent value="upload" className="flex-auto">
 					<UploadTab />
 				</TabsContent>
 
-				<TabsContent value="download" className="flex-auto mt-0 mb-0">
+				<TabsContent value="download" className="flex-auto">
 					<DownloadTab />
 				</TabsContent>
 
-				<TabsContent value="node" className="flex-auto mt-0 mb-0">
+				<TabsContent value="node" className="flex-auto">
 					<NodeTab />
 				</TabsContent>
 
-				<TabsContent value="peers" className="flex-auto mt-0 mb-0">
+				<TabsContent value="peers" className="flex-auto">
 					<PeersTab />
 				</TabsContent>
 			</Tabs>
