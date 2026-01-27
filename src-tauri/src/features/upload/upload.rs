@@ -1,5 +1,5 @@
-use codex_bindings::{upload_file, UploadOptions};
 use std::path::PathBuf;
+use storage_bindings::{upload_file, UploadOptions};
 use uuid::Uuid;
 
 use crate::features::connection::get_storage_manager_with_handle;

@@ -1,13 +1,13 @@
-use codex_bindings::{connect, debug, CodexNode};
 use std::collections::HashMap;
 use std::sync::Arc;
+use storage_bindings::{connect, debug, StorageNode};
 use tokio::sync::{Mutex, OnceCell, RwLock};
 
 use crate::features::shared::{NodeInfo, StorageConnectionStatus, StorageError};
 
 pub struct StorageManager {
-    node: Arc<Mutex<Option<CodexNode>>>,
-    config: codex_bindings::CodexConfig,
+    node: Arc<Mutex<Option<StorageNode>>>,
+    config: storage_bindings::StorageConfig,
     status: Arc<RwLock<StorageConnectionStatus>>,
     progress_senders: Arc<
         Mutex<
@@ -20,7 +20,7 @@ pub struct StorageManager {
 }
 
 impl StorageManager {
-    pub async fn new(config: codex_bindings::CodexConfig) -> Result<Self, StorageError> {
+    pub async fn new(config: storage_bindings::StorageConfig) -> Result<Self, StorageError> {
         let manager = Self {
             node: Arc::new(Mutex::new(None)),
             config,
@@ -49,7 +49,7 @@ impl StorageManager {
             }
         }
 
-        let node = match CodexNode::new(self.config.clone()) {
+        let node = match StorageNode::new(self.config.clone()) {
             Ok(node) => node,
             Err(e) => {
                 return Err(StorageError::NodeCreation(e.to_string()));
@@ -204,7 +204,7 @@ impl StorageManager {
     }
 
     // Helper methods for upload/download features
-    pub async fn get_node(&self) -> Result<CodexNode, StorageError> {
+    pub async fn get_node(&self) -> Result<StorageNode, StorageError> {
         let node_guard = self.node.lock().await;
         node_guard
             .as_ref()
@@ -262,7 +262,7 @@ pub async fn get_storage_manager_with_handle(
         Ok(Arc::clone(manager))
     } else {
         let config = if let Some(handle) = app_handle {
-            crate::features::connection::create_codex_config(&handle)
+            crate::features::connection::create_storage_config(&handle)
         } else {
             return Err(StorageError::Configuration(
                 "App handle is required to create storage manager".to_string(),

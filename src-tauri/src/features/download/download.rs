@@ -1,5 +1,5 @@
-use codex_bindings::{download_stream, DownloadStreamOptions};
 use std::path::PathBuf;
+use storage_bindings::{download_stream, DownloadStreamOptions};
 use uuid::Uuid;
 
 use crate::features::connection::get_storage_manager_with_handle;
