@@ -31,5 +31,24 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "cli": {
+      "description": "Storeman - A simple Tauri desktop application for uploading and downloading files from Codex",
+      "args": [
+        {
+          "name": "port",
+          "short": "p",
+          "description": "Custom port for the storage node",
+          "takesValue": true
+        },
+        {
+          "name": "data-dir",
+          "short": "d",
+          "description": "Custom data directory for storage",
+          "takesValue": true
+        }
+      ]
+    }
   }
 }

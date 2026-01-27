@@ -1,19 +1,14 @@
 use serde::{Deserialize, Serialize};
 use storage_bindings::DebugInfo;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum StorageConnectionStatus {
+    #[default]
     Disconnected,
     Initialized,
     Connecting,
     Connected,
     Error,
-}
-
-impl Default for StorageConnectionStatus {
-    fn default() -> Self {
-        StorageConnectionStatus::Disconnected
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

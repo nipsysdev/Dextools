@@ -26,6 +26,40 @@ Run the development server:
 cargo tauri dev
 ```
 
+### CLI Arguments
+
+The application supports command-line arguments for providing custom configurations.
+
+**Available Options:**
+
+- `-p, --port <VALUE>` - Custom port for the storage node (default: 8089)
+- `-d, --data-dir <VALUE>` - Custom data directory for storage
+- `-h, --help` - Display help message and exit
+
+**Examples:**
+
+```bash
+# Run with custom port
+./storeman --port 8090
+
+# Run with custom data directory
+./storeman --data-dir /path/to/custom/data
+
+# Run with both custom port and data directory
+./storeman --port 8090 --data-dir /path/to/custom/data
+
+# Display help
+./storeman --help
+```
+
+**Note:** When running with `cargo tauri dev`, pass arguments after `--`:
+
+```bash
+cargo tauri dev -- --port 8090 --data-dir /path/to/custom/data
+```
+
+This allows you to run multiple instances of the application simultaneously, each with its own port and data directory.
+
 ### Build
 
 Build the production application:
