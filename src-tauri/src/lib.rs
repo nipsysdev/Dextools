@@ -1,7 +1,12 @@
+mod cli;
+mod context;
 mod features;
 
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
+
+#[cfg(desktop)]
+use tauri_plugin_cli::CliExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,6 +15,63 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            {
+                // Initialize CLI plugin
+                app.handle().plugin(tauri_plugin_cli::init())?;
+
+                // Get CLI matches using the CliExt trait
+                let cli = app.handle().cli();
+                let matches = cli.matches().unwrap();
+
+                // Handle help flag
+                if crate::cli::handle_cli_help(&matches) {
+                    std::process::exit(0);
+                }
+
+                // Parse CLI arguments
+                let cli_args = crate::cli::parse_cli_args(&matches);
+
+                // Initialize AppContext synchronously
+                // This will block until initialization completes
+                let app_handle = app.handle().clone();
+                let context = tauri::async_runtime::block_on(async {
+                    crate::context::AppContext::new(cli_args, &app_handle).await
+                });
+
+                match context {
+                    Ok(ctx) => {
+                        println!("AppContext initialized successfully");
+                        app.manage(std::sync::Arc::new(ctx));
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to initialize AppContext: {}", e);
+                        return Err(Box::new(e));
+                    }
+                }
+            }
+
+            #[cfg(not(desktop))]
+            {
+                // For mobile, use default CLI args
+                let cli_args = crate::cli::CliArgs::default();
+                let app_handle = app.handle().clone();
+                let context = tauri::async_runtime::block_on(async {
+                    crate::context::AppContext::new(cli_args, &app_handle).await
+                });
+
+                match context {
+                    Ok(ctx) => {
+                        println!("AppContext initialized successfully");
+                        app.manage(std::sync::Arc::new(ctx));
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to initialize AppContext: {}", e);
+                        return Err(Box::new(e));
+                    }
+                }
+            }
+
             let fs = app.fs_scope();
 
             if let Ok(app_data_dir) = app.path().app_data_dir() {
@@ -28,17 +90,6 @@ pub fn run() {
                     storage_local_dir.display()
                 );
             }
-
-            // Initialize the storage node on app startup
-            let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) =
-                    crate::features::connection::get_storage_manager_with_handle(Some(app_handle))
-                        .await
-                {
-                    eprintln!("Failed to initialize storage manager: {}", e);
-                }
-            });
 
             Ok(())
         })
