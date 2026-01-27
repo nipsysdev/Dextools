@@ -1,5 +1,5 @@
-use codex_bindings::DebugInfo;
 use serde::{Deserialize, Serialize};
+use storage_bindings::DebugInfo;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StorageConnectionStatus {

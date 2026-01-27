@@ -1,9 +1,9 @@
-use codex_bindings::node::config::RepoKind;
-use codex_bindings::{CodexConfig, LogLevel};
+use storage_bindings::node::config::RepoKind;
+use storage_bindings::{LogLevel, StorageConfig};
 use tauri::{AppHandle, Manager};
 
 /// Creates a CodexConfig using the app handle for proper application data storage
-pub fn create_codex_config(app_handle: &AppHandle) -> CodexConfig {
+pub fn create_storage_config(app_handle: &AppHandle) -> StorageConfig {
     // Use app_data_dir for proper application data storage
     let data_dir = app_handle
         .path()
@@ -27,7 +27,7 @@ pub fn create_codex_config(app_handle: &AppHandle) -> CodexConfig {
         );
     }
 
-    CodexConfig::new()
+    StorageConfig::new()
         .log_level(LogLevel::Debug)
         .data_dir(&data_dir)
         .storage_quota(1024 * 1024 * 1024) // 1 GB
