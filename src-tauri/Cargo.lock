@@ -3803,7 +3803,8 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 [[package]]
 name = "storage-bindings"
 version = "0.2.0"
-source = "git+https://github.com/nipsysdev/storage-rust-bindings.git#78ef1d69bec7c6451afe7a2403fc7da9eb8bac3c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "147b451c8cdd850102494bb74ea225338629ccded5e12de8a8bf512c053286ce"
 dependencies = [
  "bindgen",
  "bytesize",
