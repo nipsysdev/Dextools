@@ -52,7 +52,7 @@ impl StorageManager {
             }
         }
 
-        let node = match StorageNode::new(self.config.clone()) {
+        let node = match StorageNode::new(self.config.clone()).await {
             Ok(node) => node,
             Err(e) => {
                 return Err(StorageError::NodeCreation(e.to_string()));
@@ -78,7 +78,7 @@ impl StorageManager {
             *status = StorageConnectionStatus::Connecting;
         }
 
-        let mut node = {
+        let node = {
             let mut node_guard = self.node.lock().await;
             match node_guard.take() {
                 Some(node) => node,
@@ -92,7 +92,7 @@ impl StorageManager {
             }
         };
 
-        match node.start() {
+        match node.start().await {
             Ok(_) => {}
             Err(e) => {
                 let mut node_guard = self.node.lock().await;
@@ -126,8 +126,8 @@ impl StorageManager {
                 node_guard.take()
             };
 
-            if let Some(mut node) = node_option {
-                if let Err(e) = node.stop() {
+            if let Some(node) = node_option {
+                if let Err(e) = node.stop().await {
                     eprintln!("Failed to stop node: {}", e);
                 }
                 // Put the stopped node back
@@ -182,9 +182,9 @@ impl StorageManager {
                 .clone()
         };
 
-        let peer_id = node.peer_id().ok();
-        let version = node.version().ok();
-        let repo_path = node.repo().ok();
+        let peer_id = node.peer_id().await.ok();
+        let version = node.version().await.ok();
+        let repo_path = node.repo().await.ok();
         let mut debug_info = Option::None;
 
         if node.is_started() {
